@@ -1,0 +1,85 @@
+
+services:
+  # Microservicio 1
+  microservicio-voucher:
+    build:
+      context: ./microservicios/Gestion_voucher
+      dockerfile: Dockerfile
+    container_name: msv-voucher
+    ports:
+      - "8086:8000"
+    networks:
+      - laravel_network
+    volumes:
+      - ./env/msv-finanzas/.env:/var/www/html/.env
+    depends_on:
+      - db1
+ 
+
+ # Microservicio 2
+  microservicio-pagos:
+    build:
+      context: ./microservicios/Gestion_pagos
+      dockerfile: Dockerfile
+    container_name: msv-pagos
+    ports:
+      - "8087:8000"
+    networks:
+      - laravel_network
+    volumes:
+      - ./env/msv-pagos/.env:/var/www/html/.env
+    environment:
+      - DB_HOST=db1
+      - DB_PORT=3306
+      - DB_DATABASE=instituto
+      - DB_USERNAME=root
+      - DB_PASSWORD=
+    depends_on:
+      - db1
+
+
+  # Microservicio 3
+  microservicio-finanzas:
+    build:
+      context: ./microservicios/Gestion_finanzas
+      dockerfile: Dockerfile
+    container_name: msv-finanzas
+    ports:
+      - "8088:8000"
+    networks:
+      - laravel_network
+    volumes:
+      - ./env/msv-finanzas/.env:/var/www/html/.env
+    environment:
+      - DB_HOST=db1
+      - DB_PORT=3306
+      - DB_DATABASE=instituto
+      - DB_USERNAME=root
+      - DB_PASSWORD=
+      - GREETING=hola
+
+    depends_on:
+      - db1
+
+
+  # Base de datos para Service1 (MySQL)
+  db1:
+    image: mysql:8.0
+    container_name: mysql-db
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    networks:
+      - laravel_network
+    
+    volumes:
+      - db1_data:/var/lib/mysql
+      - ./init-scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+
+networks:
+  laravel_network:
+    driver: bridge
+
+volumes:
+  db1_data: 
