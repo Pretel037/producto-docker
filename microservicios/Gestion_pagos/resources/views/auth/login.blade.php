@@ -1,10 +1,16 @@
+ 
+
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript" src="https://unpkg.com/webcam-easy/dist/webcam-easy.min.js"></script>
     <style>
         body {
             font-family: 'Poppins', sans-serif;
@@ -141,29 +147,97 @@
 </head>
 <body>
     <div class="container">
-        <h2>Iniciar Sesión</h2>
-        
+        <h2 class="text-center mb-4">Iniciar Sesión</h2>
+
         @if ($errors->any())
-        <div class="alert">
+        <div class="alert alert-danger">
             {{ $errors->first() }}
         </div>
         @endif
-        
-        <form action="{{ url('login') }}" method="POST">
+
+        <!-- Formulario de Autenticación -->
+        <form id="loginForm" method="POST" action="{{ url('login') }}">
             @csrf
-            <div class="form-group">
-                <label for="email">Correo Electrónico</label>
+            <div class="mb-3">
+                <label for="email" class="form-label">Correo Electrónico</label>
                 <input type="email" class="form-control" id="email" name="email" required>
             </div>
-            <div class="form-group">
-                <label for="password">Contraseña</label>
+            <div class="mb-3">
+                <label for="password" class="form-label">Contraseña</label>
                 <input type="password" class="form-control" id="password" name="password" required>
             </div>
-            <div class="buttons">
-                <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
-                <a href="{{ route('inicio') }}" class="btn btn-secondary">Volver a la Página Inicial</a>
+            <div class="text-center">
+                <button type="button" class="btn btn-primary" id="btn_webcam">Validar con Webcam</button>
             </div>
         </form>
+
+        <!-- Webcam -->
+        <div class="text-center mt-4">
+            <video id="webcam" width="320" height="240"></video>
+            <canvas id="canvas" class="d-none"></canvas>
+            <p id="webcamStatus" class="text-muted"></p>
+        </div>
     </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="modalMensaje" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalLabel">Mensaje</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    Validación fallida.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            const webcamElement = document.getElementById('webcam');
+            const canvasElement = document.getElementById('canvas');
+            const webcam = new Webcam(webcamElement, 'user', canvasElement);
+            let isWebcamValidated = false;
+
+            // Iniciar la webcam
+            webcam.start().then(() => {
+                $("#webcamStatus").text("Webcam lista.");
+            }).catch(err => {
+                console.error(err);
+                $("#webcamStatus").text("No se pudo iniciar la webcam.");
+            });
+
+            // Botón de validación con webcam
+            $("#btn_webcam").click(async function() {
+                const picture = await webcam.snap();
+                $.post("https://u0tug27t8f.execute-api.us-east-2.amazonaws.com/Test2/",
+                    JSON.stringify({ imgvalidacion: picture }),
+                    function(respuesta) {
+                        if (respuesta.body.codigo == 0) {
+                            alert("Validación exitosa. Usted es: " + respuesta.body.similutud);
+                            isWebcamValidated = true;
+                            $("#loginForm").submit();
+                        } else {
+                            $("#modalBody").text("La validación falló. Intente nuevamente.");
+                            $("#modalMensaje").modal('show');
+                        }
+                    }
+                );
+            });
+
+            // Previene envío sin webcam validada
+            $("#loginForm").submit(function(event) {
+                if (!isWebcamValidated) {
+                    event.preventDefault();
+                    alert("Primero debe validar su identidad con la webcam.");
+                }
+            });
+        });
+    </script>
 </body>
 </html>
